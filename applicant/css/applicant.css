@@ -1,0 +1,21 @@
+/* Applicant-specific styling */
+.container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+table {
+    margin-top: 20px;
+}
+
+form {
+    margin-top: 20px;
+}
+
+input[type="text"], input[type="email"], textarea {
+    width: 100%;
+}
+
+button[type="submit"] {
+    margin-top: 20px;
+}
