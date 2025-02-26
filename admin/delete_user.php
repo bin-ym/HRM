@@ -7,7 +7,7 @@ $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 // Delete user from database
 if ($id) {
     $sql = "DELETE FROM users WHERE id = :id";
-    $stmt = $pdo->prepare($sql);
+    $stmt = $conn->prepare($sql);
     $stmt->execute([':id' => $id]);
 }
 

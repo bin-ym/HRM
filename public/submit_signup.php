@@ -1,29 +1,35 @@
 <?php
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Sanitize user input
-    $username = htmlspecialchars(trim($_POST['username']));
-    $email = filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL);
-    $password = $_POST['password'];
-    $confirmPassword = $_POST['confirm_password'];
+session_start();
+require_once '../config/database.php';
 
-    // Validate input
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        die('Invalid email format.');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
+    $password = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
+    $role = trim($_POST['role']); // Ensure role is retrieved correctly
+
+    // Define allowed roles
+    $allowed_roles = ['Admin', 'Employee', 'Manager', 'HR Officer', 'HR Admin', 'Dean', 'Department Head', 'Finance Officer', 'Applicant'];
+
+    // Check if role is valid
+    if (!in_array($role, $allowed_roles)) {
+        $_SESSION['error'] = 'Invalid role selected.';
+        header('Location: ../public/signup.php');
+        exit();
     }
 
-    if ($password !== $confirmPassword) {
-        die('Passwords do not match.');
+    try {
+        // Insert user into database
+        $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, status) VALUES (?, ?, ?, ?, 'Active')");
+        $stmt->execute([$username, $email, $password, $role]);
+
+        $_SESSION['success'] = 'Account created successfully!';
+        header('Location: ../public/login.php');
+        exit();
+    } catch (PDOException $e) {
+        $_SESSION['error'] = 'Database Error: ' . $e->getMessage();
+        header('Location: ../public/signup.php');
+        exit();
     }
-
-    // Hash password
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-    // Save to database (example, replace with your database logic)
-    // $db = new mysqli('localhost', 'username', 'password', 'database');
-    // $stmt = $db->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-    // $stmt->bind_param('sss', $username, $email, $hashedPassword);
-    // $stmt->execute();
-
-    echo 'Sign-up successful. You can now <a href="login.php">login</a>.';
 }
 ?>

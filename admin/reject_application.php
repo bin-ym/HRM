@@ -1,24 +1,31 @@
 <?php
-// Include database connection
 include('./includes/db_connect.php');
 
-// Get application ID from URL
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-
-if ($id > 0) {
-    try {
-        // Update application status to "Rejected"
-        $sql = "UPDATE applications SET status = 'Rejected' WHERE id = :id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':id' => $id]);
-
-        // Redirect back to manage_applicants.php
-        header('Location: manage_applicants.php?message=Application Rejected Successfully');
-        exit;
-    } catch (PDOException $e) {
-        die("Error updating status: " . $e->getMessage());
+try {
+    if (!isset($_GET['application_id']) || !is_numeric($_GET['application_id'])) {
+        throw new Exception("Invalid or missing application ID.");
     }
-} else {
-    die("Invalid Application ID");
+
+    $id = intval($_GET['application_id']);
+
+    // Check if application exists
+    $sql_check = "SELECT COUNT(*) FROM applications WHERE application_id = :application_id";
+    $stmt_check = $conn->prepare($sql_check);
+    $stmt_check->execute(['application_id' => $id]);
+    $applicationExists = $stmt_check->fetchColumn();
+
+    if ($applicationExists == 0) {
+        throw new Exception("Application not found.");
+    }
+
+    // Update application status
+    $sql = "UPDATE applications SET application_status = 'rejected' WHERE application_id = :application_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute(['application_id' => $id]);
+
+    header("Location: manage_applicants.php?message=Application Rejected Successfully");
+    exit;
+} catch (Exception $e) {
+    header("Location: manage_applicants.php?message=" . urlencode("Error: " . $e->getMessage()));
+    exit;
 }
-?>

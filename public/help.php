@@ -23,6 +23,7 @@ session_start();
 </head>
 
 <body>
+<img src="assets/images/Debark.jpg" class="img-fluid" alt="Debark University HRM Banner" />
   <!-- Include Navbar -->
   <?php include('../includes/navbar.php'); ?>
 

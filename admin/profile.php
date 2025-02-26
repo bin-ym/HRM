@@ -6,7 +6,7 @@ include('./includes/db_connect.php'); // Include database connection
 // Fetch Admin Details
 try {
     $sql = "SELECT username, email FROM admins WHERE id = 1"; // Assuming there's only one admin
-    $stmt = $pdo->prepare($sql);
+    $stmt = $conn->prepare($sql);
     $stmt->execute();
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
