@@ -1,44 +1,45 @@
 <?php
 session_start();
-require_once '../config/database.php'; // Database connection
+require_once('../config/database.php');
 
-// Ensure the user is logged in as an Employee
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Employee') {
-    $_SESSION['error'] = "Please log in to access the dashboard.";
-    header("Location: ../public/login.php");
+    $_SESSION['error'] = "Please log in as an Employee to access this page.";
+    header("Location: ../PUBLIC/login.php");
     exit();
 }
 
-$employee_id = $_SESSION['user_id']; // Using user_id stored from login
+$employee_id = $_SESSION['user_id'];
 
 try {
-    // Fetch employee details
-    $sql_employee = "SELECT * FROM employees WHERE employee_id = ?";
-    $stmt_employee = $conn->prepare($sql_employee);
-    $stmt_employee->execute([$employee_id]);
-    $employee = $stmt_employee->fetch(PDO::FETCH_ASSOC);
+    // Fetch employee data from users table
+    $stmt = $conn->prepare("SELECT username, email, last_login FROM users WHERE id = ? AND role = 'Employee'");
+    $stmt->execute([$employee_id]);
+    $employee = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$employee) {
-        throw new Exception("Employee not found. Please contact the administrator.");
+        $_SESSION['error'] = "Employee data not found.";
+        header("Location: ../PUBLIC/login.php");
+        exit();
     }
 
-    // Fetch leave requests
-    $sql_leave = "SELECT leave_type, start_date, end_date, status, reason FROM leave_requests WHERE employee_id = ?";
-    $stmt_leave = $conn->prepare($sql_leave);
-    $stmt_leave->execute([$employee_id]);
-    $leave_requests = $stmt_leave->fetchAll(PDO::FETCH_ASSOC);
+    // Fetch additional employee details (if using employees table)
+    $emp_stmt = $conn->prepare("SELECT first_name, last_name, position, hire_date FROM employees WHERE employee_id = ?");
+    $emp_stmt->execute([$employee_id]);
+    $emp_details = $emp_stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Fetch salary details (Correct columns: basic_salary, bonuses, deductions, net_pay)
-    $sql_salary = "SELECT payment_date, basic_salary, bonuses, deductions, net_pay FROM salary WHERE employee_id = ?";
-    $stmt_salary = $conn->prepare($sql_salary);
-    $stmt_salary->execute([$employee_id]);
-    $salary_details = $stmt_salary->fetchAll(PDO::FETCH_ASSOC);
+    // Fetch pending leave requests
+    $leave_stmt = $conn->prepare("SELECT COUNT(*) FROM leave_requests WHERE employee_id = ? AND status = 'pending'");
+    $leave_stmt->execute([$employee_id]);
+    $pending_leaves = $leave_stmt->fetchColumn();
 
-} catch (Exception $e) {
-    $_SESSION['error'] = $e->getMessage();
-    header("Location: ../public/login.php");
+} catch (PDOException $e) {
+    error_log("Employee Dashboard Error: " . $e->getMessage());
+    $_SESSION['error'] = "Error loading dashboard: " . $e->getMessage();
+    header("Location: ../PUBLIC/login.php");
     exit();
 }
+
+include('employee_navbar.php'); // Employee-specific navbar
 ?>
 
 <!DOCTYPE html>
@@ -48,58 +49,76 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Dashboard - Debark University HRM</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        .dashboard-card { transition: transform 0.2s; }
+        .dashboard-card:hover { transform: scale(1.05); }
+        .status-badge { font-size: 0.9rem; }
+    </style>
 </head>
 <body>
-    <!-- Employee Dashboard Navbar -->
-    <?php include('./employee_navbar.php'); ?>
-
     <div class="container my-5">
-        <h1 class="text-center">Welcome, <?= htmlspecialchars($employee['first_name'] ?? 'Employee'); ?>!</h1>
-        <p class="text-center">Your Employee ID: <?= htmlspecialchars($employee['employee_id'] ?? 'N/A'); ?></p>
-
-        <!-- Display Success/Error Messages -->
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert alert-success"><?= htmlspecialchars($_SESSION['success']); ?></div>
-            <?php unset($_SESSION['success']); ?>
-        <?php endif; ?>
-        <?php if (isset($_SESSION['error'])): ?>
-            <div class="alert alert-danger"><?= htmlspecialchars($_SESSION['error']); ?></div>
-            <?php unset($_SESSION['error']); ?>
-        <?php endif; ?>
-
-        <!-- Dashboard Links -->
-        <div class="row">
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card text-center">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <div class="card bg-light shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Update Profile</h5>
-                        <p class="card-text">View and update your personal information.</p>
-                        <a href="update_profile.php" class="btn btn-primary">Go to Profile</a>
+                        <h2 class="mb-3">Welcome, <?= htmlspecialchars($employee['username']); ?>!</h2>
+                        <p class="text-muted">Employee Dashboard | Email: <?= htmlspecialchars($employee['email']); ?></p>
+                        <?php if ($emp_details): ?>
+                            <p class="text-muted">Name: <?= htmlspecialchars($emp_details['first_name'] . ' ' . $emp_details['last_name']); ?> | Position: <?= htmlspecialchars($emp_details['position']); ?></p>
+                        <?php endif; ?>
+                        <div class="d-flex justify-content-center gap-4">
+                            <span class="badge bg-warning text-dark status-badge">Pending Leave Requests: <?= $pending_leaves ?></span>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Submit Leave Request</h5>
-                        <p class="card-text">Request for leave and check approval status.</p>
-                        <a href="leave_request.php" class="btn btn-warning">Request Leave</a>
+        </div>
+
+        <!-- Dashboard Options -->
+        <div class="row g-4">
+            <!-- Submit Leave Request -->
+            <div class="col-md-4 col-lg-3">
+                <div class="card dashboard-card shadow-sm">
+                    <img src="../assets/images/leave_icon.png" class="card-img-top p-3" alt="Leave Request" style="max-height: 150px; object-fit: contain;">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Leave Request</h5>
+                        <p class="card-text text-muted">Submit a new leave request</p>
+                        <a href="leave_request.php" class="btn btn-primary btn-sm">Request Leave</a>
                     </div>
-                </div> 
+                </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card text-center">
-                    <div class="card-body">
+
+            <!-- View Salary Details -->
+            <div class="col-md-4 col-lg-3">
+                <div class="card dashboard-card shadow-sm">
+                    <img src="../assets/images/salary_icon.png" class="card-img-top p-3" alt="Salary" style="max-height: 150px; object-fit: contain;">
+                    <div class="card-body text-center">
                         <h5 class="card-title">Salary Details</h5>
-                        <p class="card-text">View your salary breakdown and payment history.</p>
-                        <a href="salary_details.php" class="btn btn-success">View Salary</a>
+                        <p class="card-text text-muted">View your salary information</p>
+                        <a href="salary_details.php" class="btn btn-primary btn-sm">View Salary</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update Profile -->
+            <div class="col-md-4 col-lg-3">
+                <div class="card dashboard-card shadow-sm">
+                    <img src="../assets/images/profile_icon.png" class="card-img-top p-3" alt="Profile" style="max-height: 150px; object-fit: contain;">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Update Profile</h5>
+                        <p class="card-text text-muted">Edit your personal details</p>
+                        <a href="update_profile.php" class="btn btn-primary btn-sm">Update Profile</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"></script>
+    <?php include('../includes/footer.php'); ?>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <?php
-include('./includes/db_connect.php');
+require_once('../config/database.php');
 
 // Get user ID from URL
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
