@@ -2,26 +2,25 @@
 session_start();
 require_once('../config/database.php');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'HR Officer') {
-    $_SESSION['error'] = "Access denied.";
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Department Head') {
+    $_SESSION['error'] = "Please log in as a Department Head to access this page.";
     header("Location: ../PUBLIC/login.php");
     exit();
 }
 
 try {
-    $stmt = $conn->prepare("SELECT e.employee_id, e.first_name, e.last_name, e.email, e.phone, e.address, e.position, e.department, u.username 
-                            FROM employees e 
-                            JOIN users u ON e.employee_id = u.id 
-                            WHERE u.role = 'Employee' 
-                            ORDER BY e.employee_id ASC");
+    $stmt = $conn->prepare("SELECT u.id, u.username, u.email, e.first_name, e.last_name, e.phone, e.address, e.position, e.department 
+                            FROM users u 
+                            LEFT JOIN employees e ON u.id = e.employee_id 
+                            WHERE u.role = 'Employee'");
     $stmt->execute();
     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("View Employee Info Error: " . $e->getMessage());
-    $_SESSION['error'] = "Error loading employee info.";
+    $_SESSION['error'] = "Error loading employee info: " . $e->getMessage();
 }
 
-include('./includes/hr_navbar.php');
+include('./includes/department_navbar.php');
 ?>
 
 <!DOCTYPE html>
@@ -35,16 +34,18 @@ include('./includes/hr_navbar.php');
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-    <div class="container mt-5">
-        <h2 class="text-center mb-4"><i class="fas fa-users me-2"></i>Employee Information</h2>
+    <div class="container my-5">
+        <h2 class="text-center mb-4"><i class="fas fa-user me-2"></i>Employee Information</h2>
 
         <?php if (isset($_SESSION['error'])): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?></div>
         <?php endif; ?>
 
-        <?php if ($employees): ?>
+        <?php if (empty($employees)): ?>
+            <p class="text-center">No employee information found.</p>
+        <?php else: ?>
             <div class="table-responsive">
-                <table class="table table-bordered table-hover">
+                <table class="table table-bordered table-hover shadow-sm">
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
@@ -60,9 +61,9 @@ include('./includes/hr_navbar.php');
                     <tbody>
                         <?php foreach ($employees as $emp): ?>
                             <tr>
-                                <td><?= htmlspecialchars($emp['employee_id']); ?></td>
+                                <td><?= htmlspecialchars($emp['id']); ?></td>
                                 <td><?= htmlspecialchars($emp['username']); ?></td>
-                                <td><?= htmlspecialchars($emp['first_name'] . ' ' . $emp['last_name']); ?></td>
+                                <td><?= htmlspecialchars(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? '')); ?></td>
                                 <td><?= htmlspecialchars($emp['email']); ?></td>
                                 <td><?= htmlspecialchars($emp['phone'] ?? 'N/A'); ?></td>
                                 <td><?= htmlspecialchars($emp['address'] ?? 'N/A'); ?></td>
@@ -73,15 +74,14 @@ include('./includes/hr_navbar.php');
                     </tbody>
                 </table>
             </div>
-        <?php else: ?>
-            <div class="alert alert-warning text-center">No employee information found.</div>
         <?php endif; ?>
         <div class="text-center mt-3">
-            <a href="hr_officer_dashboard.php" class="btn btn-secondary">Back to Dashboard</a>
+            <a href="department_head_dashboard.php" class="btn btn-secondary">Back to Dashboard</a>
         </div>
     </div>
 
     <?php include('../includes/footer.php'); ?>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 </body>
 </html>

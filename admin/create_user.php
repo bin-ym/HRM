@@ -6,31 +6,36 @@ require_once('../vendor/autoload.php');
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+// Ensure session is active and the user is an admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Admin') {
     $_SESSION['error'] = "Access denied. Please log in as an Admin.";
     header("Location: ../PUBLIC/login.php");
     exit();
 }
 
+// Improved OTP Generation function
 function generateOTP($length = 8) {
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     $otp = '';
     for ($i = 0; $i < $length; $i++) {
-        $otp .= $characters[rand(0, strlen($characters) - 1)];
+        $otp .= $characters[random_int(0, strlen($characters) - 1)]; // Secure random number generation
     }
     return $otp;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Sanitize and filter the input
     $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $role = filter_input(INPUT_POST, 'role', FILTER_SANITIZE_STRING);
     $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING);
 
+    // Generate OTP and hash it for temporary use
     $otp = generateOTP();
-    $password = password_hash($otp, PASSWORD_ARGON2ID);
+    $password = password_hash($otp, PASSWORD_ARGON2ID); // Securely hash OTP
 
     try {
+        // Check if the username or email already exists
         $check_stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE username = ? OR email = ?");
         $check_stmt->execute([$username, $email]);
         if ($check_stmt->fetchColumn() > 0) {
@@ -39,31 +44,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
 
+        // Insert the user data into the database
         $sql = "INSERT INTO users (username, email, password, role, status, created_at, is_temp_password) 
                 VALUES (?, ?, ?, ?, ?, NOW(), 1)";
         $stmt = $conn->prepare($sql);
         if ($stmt->execute([$username, $email, $password, $role, $status])) {
+            // Send OTP email
             $mail = new PHPMailer(true);
-            // $mail->SMTPDebug = 2; // Comment out or set to 0 in production
             try {
+                // Setup PHPMailer
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = 'smtp.gmail.com';  
                 $mail->SMTPAuth = true;
-                $mail->Username = 'binyam.tagel@gmail.com';
-                $mail->Password = 'mxab gkzy uydt taoo'; // Your App Password
+                $mail->Username = 'binyam.tagel@gmail.com';  // Use your real email
+                $mail->Password = 'mxab gkzy uydt taoo';  // Use an App Password or better secure method
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port = 587;
 
+                // Set sender and recipient
                 $mail->setFrom('binyam.tagel@gmail.com', 'Debark HRM');
-                $mail->addAddress($email, $username);
+                $mail->addAddress($email, $username); 
+
+                // Email content
                 $mail->isHTML(true);
                 $mail->Subject = 'Your One-Time Password for Debark University HRM';
                 $mail->Body = "Dear $username,<br><br>Your account has been created. Please use the following one-time password to log in:<br><strong>$otp</strong><br><br>You must change this password on your first login.<br><br>Login here: <a href='http://localhost/HRM/HRM/PUBLIC/login.php'>Login</a><br><br>Regards,<br>Debark University HRM Team";
                 $mail->AltBody = "Dear $username,\n\nYour account has been created. Please use this one-time password to log in: $otp\n\nYou must change it on your first login.\n\nLogin here: http://localhost/HRM/HRM/PUBLIC/login.php\n\nRegards,\nDebark University HRM Team";
 
+                // Send email
                 $mail->send();
                 $_SESSION['success'] = "User created successfully! OTP has been sent to $email.";
             } catch (Exception $e) {
+                // Handle email sending error
+                error_log("PHPMailer Error: " . $mail->ErrorInfo);
                 $_SESSION['error'] = "User created, but email failed: " . $mail->ErrorInfo;
             }
             header("Location: manage_users.php");
@@ -72,12 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['error'] = "Error creating user.";
         }
     } catch (PDOException $e) {
+        // Log database errors
         error_log("Create User Error: " . $e->getMessage());
         $_SESSION['error'] = "Error creating user: " . $e->getMessage();
     }
 }
 
-include('./includes/admin_navbar.php'); // Standardized path
+include('./includes/admin_navbar.php'); // Include the admin navbar
 ?>
 
 <!DOCTYPE html>
@@ -86,7 +100,7 @@ include('./includes/admin_navbar.php'); // Standardized path
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create User - Debark University HRM</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
@@ -145,7 +159,7 @@ include('./includes/admin_navbar.php'); // Standardized path
 
     <?php include('./includes/footer.php'); ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script>
         (function () {
             'use strict';

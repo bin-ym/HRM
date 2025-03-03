@@ -12,7 +12,7 @@ $employee_id = $_SESSION['user_id'];
 
 try {
     // Fetch employee data from users table
-    $stmt = $conn->prepare("SELECT username, email FROM users WHERE id = ? AND role = 'Employee'");
+    $stmt = $conn->prepare("SELECT username, email, first_name, last_name FROM users WHERE id = ? AND role = 'Employee'");
     $stmt->execute([$employee_id]);
     $employee = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -27,6 +27,8 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+    $first_name = filter_input(INPUT_POST, 'first_name', FILTER_SANITIZE_STRING);
+    $last_name = filter_input(INPUT_POST, 'last_name', FILTER_SANITIZE_STRING);
 
     // Validation
     $errors = [];
@@ -35,7 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = "Invalid email format.";
-    } 
+    }
+    if (!empty($first_name) && !preg_match('/^[a-zA-Z\s]{1,50}$/', $first_name)) {
+        $errors['first_name'] = "First name must be 1-50 letters and spaces only.";
+    }
+    if (!empty($last_name) && !preg_match('/^[a-zA-Z\s]{1,50}$/', $last_name)) {
+        $errors['last_name'] = "Last name must be 1-50 letters and spaces only.";
+    }
 
     if (empty($errors)) {
         try {
@@ -46,14 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors['email'] = "Username or email is already in use by another user.";
             } else {
                 // Update users table
-                $sql = "UPDATE users SET username = ?, email = ? WHERE id = ?";
+                $sql = "UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ? WHERE id = ?";
                 $stmt = $conn->prepare($sql);
-                if ($stmt->execute([$username, $email, $employee_id])) {
+                if ($stmt->execute([$username, $email, $first_name ?: null, $last_name ?: null, $employee_id])) {
                     $_SESSION['success'] = "Profile updated successfully!";
                     header("Location: employee_dashboard.php");
                     exit();
                 } else {
-                    $_SESSION['error'] = "Error updating profile.";
+                    $_SESSION['error'] = "Error updating profile in database.";
                 }
             }
         } catch (PDOException $e) {
@@ -92,6 +100,18 @@ include('employee_navbar.php');
         <?php if ($employee): ?>
             <div class="card shadow-sm p-4">
                 <form method="POST" class="needs-validation" novalidate id="profileForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control <?= isset($_SESSION['errors']['first_name']) ? 'is-invalid' : ''; ?>" id="first_name" name="first_name" value="<?= htmlspecialchars($employee['first_name'] ?? ''); ?>" pattern="[a-zA-Z\s]{1,50}">
+                            <div class="invalid-feedback"><?= isset($_SESSION['errors']['first_name']) ? htmlspecialchars($_SESSION['errors']['first_name']) : 'Please enter a valid first name.'; ?></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control <?= isset($_SESSION['errors']['last_name']) ? 'is-invalid' : ''; ?>" id="last_name" name="last_name" value="<?= htmlspecialchars($employee['last_name'] ?? ''); ?>" pattern="[a-zA-Z\s]{1,50}">
+                            <div class="invalid-feedback"><?= isset($_SESSION['errors']['last_name']) ? htmlspecialchars($_SESSION['errors']['last_name']) : 'Please enter a valid last name.'; ?></div>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
                         <input type="text" class="form-control <?= isset($_SESSION['errors']['username']) ? 'is-invalid' : ''; ?>" id="username" name="username" value="<?= htmlspecialchars($employee['username']); ?>" pattern="[a-zA-Z0-9_]{3,20}" required>
@@ -103,29 +123,10 @@ include('employee_navbar.php');
                         <div class="invalid-feedback"><?= isset($_SESSION['errors']['email']) ? htmlspecialchars($_SESSION['errors']['email']) : 'Please enter a valid email address.'; ?></div>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <button type="submit" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#confirmModal">Update Profile</button>
+                        <button type="submit" class="btn btn-primary">Update Profile</button>
                         <a href="employee_dashboard.php" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
-            </div>
-
-            <!-- Confirmation Modal -->
-            <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="confirmModalLabel">Confirm Update</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            Are you sure you want to update your profile?
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" form="profileForm" class="btn btn-primary">Yes, Update</button>
-                        </div>
-                    </div>
-                </div>
             </div>
         <?php else: ?>
             <p class="text-center">Profile data not available. Please contact HR to set up your profile.</p>
@@ -134,7 +135,12 @@ include('employee_navbar.php');
             </div>
         <?php endif; ?>
 
-        <?php if (isset($_SESSION['errors'])) unset($_SESSION['errors']); // Clear errors after display ?>
+        <?php if (isset($_SESSION['errors'])): ?>
+            <div class="mt-3">
+                <pre><?php print_r($_SESSION['errors']); ?></pre>
+            </div>
+            <?php unset($_SESSION['errors']); ?>
+        <?php endif; ?>
     </div>
 
     <?php include('../includes/footer.php'); ?>
@@ -143,19 +149,14 @@ include('employee_navbar.php');
     <script>
         (function () {
             'use strict';
-            const forms = document.querySelectorAll('.needs-validation');
-            Array.from(forms).forEach(form => {
-                form.addEventListener('submit', event => {
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    } else {
-                        event.preventDefault();
-                        new bootstrap.Modal(document.getElementById('confirmModal')).show();
-                    }
-                    form.classList.add('was-validated');
-                }, false);
-            });
+            const form = document.getElementById('profileForm');
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
         })();
     </script>
 </body>

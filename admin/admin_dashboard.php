@@ -74,7 +74,6 @@ try {
         <div class="row g-4">
             <div class="col-md-4 col-lg-3">
                 <div class="card dashboard-card shadow-sm">
-                    <img src="../assets/images/manage_users_icon.png" class="card-img-top p-3" alt="Manage Users" style="max-height: 150px; object-fit: contain;">
                     <div class="card-body text-center">
                         <h5 class="card-title">Manage Users</h5>
                         <p class="card-text text-muted">View, edit, or delete user accounts</p>

@@ -22,15 +22,15 @@ try {
         exit();
     }
 
-    // Fetch additional employee details (if using employees table)
-    $emp_stmt = $conn->prepare("SELECT first_name, last_name, position, hire_date FROM employees WHERE employee_id = ?");
-    $emp_stmt->execute([$employee_id]);
-    $emp_details = $emp_stmt->fetch(PDO::FETCH_ASSOC);
-
     // Fetch pending leave requests
     $leave_stmt = $conn->prepare("SELECT COUNT(*) FROM leave_requests WHERE employee_id = ? AND status = 'pending'");
     $leave_stmt->execute([$employee_id]);
     $pending_leaves = $leave_stmt->fetchColumn();
+
+    // Count notifications (e.g., leave request status updates)
+    $notif_stmt = $conn->prepare("SELECT COUNT(*) FROM leave_requests WHERE employee_id = ? AND status != 'pending'");
+    $notif_stmt->execute([$employee_id]);
+    $notifications = $notif_stmt->fetchColumn();
 
 } catch (PDOException $e) {
     error_log("Employee Dashboard Error: " . $e->getMessage());
@@ -39,7 +39,7 @@ try {
     exit();
 }
 
-include('employee_navbar.php'); // Employee-specific navbar
+include('employee_navbar.php');
 ?>
 
 <!DOCTYPE html>
@@ -66,11 +66,9 @@ include('employee_navbar.php'); // Employee-specific navbar
                     <div class="card-body">
                         <h2 class="mb-3">Welcome, <?= htmlspecialchars($employee['username']); ?>!</h2>
                         <p class="text-muted">Employee Dashboard | Email: <?= htmlspecialchars($employee['email']); ?></p>
-                        <?php if ($emp_details): ?>
-                            <p class="text-muted">Name: <?= htmlspecialchars($emp_details['first_name'] . ' ' . $emp_details['last_name']); ?> | Position: <?= htmlspecialchars($emp_details['position']); ?></p>
-                        <?php endif; ?>
                         <div class="d-flex justify-content-center gap-4">
                             <span class="badge bg-warning text-dark status-badge">Pending Leave Requests: <?= $pending_leaves ?></span>
+                            <span class="badge bg-info status-badge">Notifications: <?= $notifications ?></span>
                         </div>
                     </div>
                 </div>
@@ -80,9 +78,8 @@ include('employee_navbar.php'); // Employee-specific navbar
         <!-- Dashboard Options -->
         <div class="row g-4">
             <!-- Submit Leave Request -->
-            <div class="col-md-4 col-lg-3">
+            <div class="col-md-4">
                 <div class="card dashboard-card shadow-sm">
-                    <img src="../assets/images/leave_icon.png" class="card-img-top p-3" alt="Leave Request" style="max-height: 150px; object-fit: contain;">
                     <div class="card-body text-center">
                         <h5 class="card-title">Leave Request</h5>
                         <p class="card-text text-muted">Submit a new leave request</p>
@@ -90,23 +87,39 @@ include('employee_navbar.php'); // Employee-specific navbar
                     </div>
                 </div>
             </div>
-
-            <!-- View Salary Details -->
-            <div class="col-md-4 col-lg-3">
+            <!-- View Posts -->
+            <div class="col-md-4">
                 <div class="card dashboard-card shadow-sm">
-                    <img src="../assets/images/salary_icon.png" class="card-img-top p-3" alt="Salary" style="max-height: 150px; object-fit: contain;">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Salary Details</h5>
-                        <p class="card-text text-muted">View your salary information</p>
-                        <a href="salary_details.php" class="btn btn-primary btn-sm">View Salary</a>
+                   <div class="card-body text-center">
+                        <h5 class="card-title">View Posts</h5>
+                        <p class="card-text text-muted">See current job openings</p>
+                        <a href="view_posts.php" class="btn btn-primary btn-sm">View Posts</a>
                     </div>
                 </div>
             </div>
-
-            <!-- Update Profile -->
-            <div class="col-md-4 col-lg-3">
+            <!-- Send Feedback -->
+            <div class="col-md-4">
                 <div class="card dashboard-card shadow-sm">
-                    <img src="../assets/images/profile_icon.png" class="card-img-top p-3" alt="Profile" style="max-height: 150px; object-fit: contain;">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Send Feedback</h5>
+                        <p class="card-text text-muted">Submit your feedback</p>
+                        <a href="send_feedback.php" class="btn btn-primary btn-sm">Send Feedback</a>
+                    </div>
+                </div>
+            </div>
+            <!-- View Notifications -->
+            <div class="col-md-4">
+                <div class="card dashboard-card shadow-sm">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">View Notifications</h5>
+                        <p class="card-text text-muted">Check updates</p>
+                        <a href="view_notifications.php" class="btn btn-primary btn-sm">View Notifications</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Update Profile -->
+            <div class="col-md-4">
+                <div class="card dashboard-card shadow-sm">
                     <div class="card-body text-center">
                         <h5 class="card-title">Update Profile</h5>
                         <p class="card-text text-muted">Edit your personal details</p>

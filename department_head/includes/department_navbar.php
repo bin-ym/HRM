@@ -1,26 +1,32 @@
-<?php // employee_navbar.php ?>
+<?php // department_navbar.php ?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-        <a class="navbar-brand" href="employee_dashboard.php">Debark University HRM - Employee</a>
+        <a class="navbar-brand" href="department_dashboard.php">Debark University HRM - Department Head</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="employee_dashboard.php">Dashboard</a>
+                    <a class="nav-link" href="department_dashboard.php">Dashboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="view_posts.php">View Posts</a>
+                    <a class="nav-link" href="submit_job_ranking.php">Submit Job Ranking</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="send_feedback.php">Send Feedback</a>
+                    <a class="nav-link" href="employee_requests.php">Employee Requests</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="view_notifications.php">Notifications</a>
+                    <a class="nav-link" href="view_feedback.php">View Feedback</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="update_profile.php">Update Profile</a>
+                    <a class="nav-link" href="fill_attendance.php">Fill Attendance</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="view_employee_info.php">View Employee Info</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="manage_permission.php">Manage Permissions</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link btn btn-danger text-white" href="../PUBLIC/logout.php">Logout</a>

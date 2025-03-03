@@ -15,10 +15,10 @@ try {
     $mail->Port = 587;
 
     $mail->setFrom('binyam.tagel@gmail.com', 'Debark HRM');
-    $mail->addAddress('yosefdemeke08@gmail.com'); // Replace with a real recipient email
+    $mail->addAddress('betesh561@gmail.com'); // Replace with a real recipient email
     $mail->isHTML(true);
     $mail->Subject = 'Test Email from Debark HRM';
-    $mail->Body = 'This is a test email from XAMPP using Debark HRM!';
+    $mail->Body = 'This is a YM from Debark HRM!';
     $mail->send();
     echo "Test email sent successfully!";
 } catch (Exception $e) {
